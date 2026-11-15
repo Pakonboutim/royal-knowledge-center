@@ -70,7 +70,7 @@ const icon=(n,sm=false)=>{const paths={leaf:'<path d="M20 4c-7 0-14 3-14 11a5 5 
 /* Validate CMS links before insertion into HTML. Never allow script/data URLs. */
 function safeContentUrl(value){
   const raw=String(value||'').trim();
-  if(!raw||raw.length>1600||/[\\u0000-\\u001f\\u007f]/.test(raw))return '';
+  if(!raw||raw.length>1600||[...raw].some(c=>c.charCodeAt(0)<32||c.charCodeAt(0)===127))return '';
   if(/^#\/[A-Za-z0-9_\/-]+$/.test(raw))return raw;
   try{const u=new URL(raw);return u.protocol==='https:'&&!u.username&&!u.password?u.href:''}catch(_){return ''}
 }
