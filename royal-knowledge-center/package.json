@@ -6,7 +6,7 @@
   "engines": {"node": "22.x"},
   "scripts": {
     "dev": "node dev-server.mjs",
-    "test": "node --check < public/site.js && node --check public/rich-editor.js && node --check < public/qrcode.js && node --check api/bridge.js && node tests-smoke.mjs",
+    "test": "node --check < public/site.js && node --check public/rich-editor.js && node --check public/editor-history.js && node --check < public/qrcode.js && node --check api/bridge.js && node tests-smoke.mjs",
     "build": "node -e \"console.log('Static site in public/')\""
   }
 }
