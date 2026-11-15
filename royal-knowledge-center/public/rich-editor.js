@@ -55,6 +55,9 @@ function capture(holder,field,el){
 function toolbar(){
  return '<div class="wordbar" role="toolbar" aria-label="จัดรูปแบบข้อความแบบ Word">'+
  '<span class="wordbar-note">เลือกข้อความ</span>'+
+ '<button type="button" data-cms-undo disabled aria-disabled="true" aria-label="ย้อนกลับ" title="ย้อนกลับ (Ctrl+Z)">↶</button>'+
+ '<button type="button" data-cms-redo disabled aria-disabled="true" aria-label="ทำซ้ำ" title="ทำซ้ำ (Ctrl+Y หรือ Ctrl+Shift+Z)">↷</button>'+
+ '<span class="wordbar-divider"></span>'+
  '<label>ขนาด <input type="number" min="8" max="96" step="1" value="16" data-word-pt aria-label="ขนาดตัวอักษรเป็นพอยต์"> pt</label>'+
  '<span class="wordbar-divider"></span>'+
  '<button type="button" data-word-cmd="bold" title="ตัวหนา Ctrl+B" aria-label="ตัวหนา"><b>B</b></button>'+
