@@ -376,3 +376,38 @@ body{background:var(--paper)}.site-header{background:rgba(72,47,18,.97);box-shad
 .home-base-copy p{color:#635b4d;font-size:15px;line-height:1.95}
 .home-base-copy .btn{margin-top:12px}
 @media(max-width:800px){.home-base-row{grid-template-columns:1fr;gap:18px;padding:26px 6px 50px}.home-base-row.reverse .home-base-photo{order:0}.home-base-photo img{height:250px}.home-base-copy h3{font-size:30px}}
+
+/* Individual station header banners — independent per VisualPages record. */
+.station-hero{position:relative;isolation:isolate;display:flex;align-items:center;min-height:clamp(410px,41vw,630px);overflow:hidden;background:linear-gradient(115deg,#3d331c,#a87b37 60%,#d7b96a)}
+.station-hero-photo{position:absolute;inset:0;z-index:-3;width:100%;height:100%;object-fit:cover;object-position:center center}
+.station-hero-shade{position:absolute;inset:0;z-index:-2;background:linear-gradient(90deg,rgba(24,29,18,.80) 0%,rgba(29,34,20,.60) 42%,rgba(29,35,21,.14) 100%),linear-gradient(0deg,rgba(37,32,21,.36),transparent 50%)}
+.station-hero-content{position:relative;z-index:2;padding-block:65px 105px;color:#fff9e7}
+.station-hero-crumbs{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;font-weight:650;color:#fff5dd;margin-bottom:48px}
+.station-hero-crumbs a{border-bottom:1px solid transparent;transition:border-color .2s}
+.station-hero-crumbs a:hover,.station-hero-crumbs a:focus-visible{border-color:#fff1bd}
+.station-hero-eyebrow{display:block;font-size:clamp(12px,1.15vw,15px);letter-spacing:.07em;font-weight:800;color:#ffdfa1;margin-bottom:14px}
+.station-hero h1{margin:0;max-width:900px;font-size:clamp(35px,5.1vw,76px);line-height:1.22;font-weight:800;letter-spacing:-.02em;color:#fff9e9;text-shadow:0 3px 20px #0004}
+.station-hero-subtitle{margin:20px 0 0;max-width:650px;color:#fffaed;font-size:clamp(15px,1.4vw,19px);line-height:1.8;text-shadow:0 2px 10px #0007}
+.station-hero-mist{position:absolute;z-index:1;pointer-events:none;inset:auto 0 -1px;height:125px;background:linear-gradient(to top,#fffaf0 0%,rgba(255,250,240,.88) 21%,rgba(255,250,240,.32) 55%,transparent 100%)}
+.station-hero-change{display:inline-flex;align-items:center;gap:8px;margin:25px 0 0;padding:12px 21px;min-height:46px;background:#fff8e9;color:#63440f;border:2px solid #e8c77e;border-radius:999px;font-weight:800;font-size:14px;box-shadow:0 6px 22px #0003;cursor:pointer;position:relative;z-index:4}
+.station-hero-change:hover,.station-hero-change:focus-visible{background:#ffe6ab;outline:3px solid #fff9e7;outline-offset:3px}
+.station-hero-image-hint{display:block;color:#fff3d0;margin-top:9px;font-size:12px;font-weight:650}
+.station-hero .visual-editable{color:#fff9e9;background:rgba(22,23,15,.13)}
+.station-hero .visual-editable:focus{color:#342a19;background:#fff9e9}
+.knowledge-page .station-hero + .visual-toolbar{margin-top:-1px}
+@media(max-width:800px){
+  .station-hero{min-height:480px}
+  .station-hero-photo{object-position:54% center}
+  .station-hero-shade{background:linear-gradient(90deg,rgba(23,29,17,.81),rgba(23,29,17,.46)),linear-gradient(0deg,rgba(20,24,16,.38),transparent 70%)}
+  .station-hero-content{padding-block:55px 90px}
+  .station-hero-crumbs{margin-bottom:38px;font-size:12px}
+  .station-hero-mist{height:100px}
+}
+@media(max-width:560px){
+  .station-hero{min-height:455px}
+  .station-hero-content{padding-block:38px 88px}
+  .station-hero-crumbs{margin-bottom:33px}
+  .station-hero h1{font-size:clamp(32px,8vw,46px)}
+  .station-hero-subtitle{font-size:14px}
+  .station-hero-change{font-size:13px;padding:10px 15px;min-height:42px}
+}
