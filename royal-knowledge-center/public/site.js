@@ -416,16 +416,34 @@ function visualToolbar(id){
     </div>
   </div></div>`;
 }
+/* Image banner is part of each group's VisualPages record (no schema migration). */
+function stationHero(id,x,ix,p,canEdit){
+  const editable=canEdit&&!visualPreview;
+  const fallback=KNOWLEDGE_IMAGES[id]?.scene||PHOTO[id]||x.image;
+  const src=imgUrl(p.bannerImage)||imgUrl(fallback);
+  return `<section class="station-hero" id="station-hero" aria-label="แบนเนอร์ฐาน${esc(x.title)}">
+    <img class="station-hero-photo" src="${src}" alt="ภาพแบนเนอร์ฐาน${esc(x.title)}" fetchpriority="high" decoding="async">
+    <div class="station-hero-shade" aria-hidden="true"></div>
+    <div class="container station-hero-content">
+      <nav class="station-hero-crumbs" aria-label="เส้นทางนำทาง"><a href="#/home">หน้าแรก</a><span aria-hidden="true">›</span><a href="#/stations">4 ฐานองค์ความรู้</a><span aria-hidden="true">›</span><span>ฐานที่ ${ix+1}</span></nav>
+      <span class="station-hero-eyebrow">ฐานองค์ความรู้ที่ ${String(ix+1).padStart(2,'0')} · ${esc(x.kicker||'เรียนรู้เพื่อความพอเพียง')}</span>
+      ${visualPageField('title',p.title,'h1')}
+      <p class="station-hero-subtitle">เรียนรู้จากภูมิปัญญาและการลงมือปฏิบัติจริง</p>
+      ${editable?`<button type="button" class="station-hero-change" data-visual-image="station-header" aria-label="อัปโหลดภาพแบนเนอร์ของฐานนี้">📷 เปลี่ยนภาพแบนเนอร์</button><span class="station-hero-image-hint">แนะนำภาพแนวนอน 1600 × 650 พิกเซล · กดบันทึกหลังเปลี่ยนภาพ</span>`:''}
+    </div>
+    <div class="station-hero-mist" aria-hidden="true"></div>
+  </section>`;
+}
 function detail(id){
  const x=activities.find(z=>z.id===id);if(!x)return stationList();
  const ix=activities.indexOf(x),p=visualCurrentPage(id,x),canEdit=visualMode&&loggedGroup===id;
  return `<main class="view knowledge-page">
-   ${banner(x.title,'แหล่งเรียนรู้เพื่อศึกษาความหมาย หลักการ ประโยชน์ และความเชื่อมโยงกับศาสตร์พระราชา','ฐานองค์ความรู้ที่ '+(ix+1)+' · '+x.title)}
+   ${stationHero(id,x,ix,p,canEdit)}
    ${visualToolbar(id)}
    <div class="container knowledge-wrap">
      <header class="knowledge-intro">
        <span class="eyebrow">ฐานองค์ความรู้ที่ ${String(ix+1).padStart(2,'0')}</span>
-       ${visualPageField('title',p.title,'h2')}
+       <h2>เรียนรู้จากฐานนี้</h2>
        ${visualPageField('short',p.short,'p')}
        ${canEdit&&!visualPreview?`<p class="visual-soft-note">คลิกข้อความเพื่อแก้ไข · คลิกภาพเพื่อเปลี่ยนภาพ · กด ＋ เพื่อเพิ่มส่วนได้ทันที</p>`:''}
      </header>
@@ -491,6 +509,10 @@ async function visualReadFile(file,id){
    });
    let imageValue=data;
    if(GAS){toast('กำลังอัปโหลดภาพไปยัง Google Drive');const r=await gsCall('uploadGroupImage',loggedGroup,loginCode,data.split(',')[1],'image/jpeg');if(!r||!r.ok)throw Error(r?.message||'อัปโหลดไม่สำเร็จ');imageValue=r.url;}
+   if(id==='station-header'){
+     visualDraft.bannerImage=imageValue;visualDirty=true;visualRerender('station-hero');
+     toast('เปลี่ยนภาพแบนเนอร์แล้ว กรุณากดบันทึก');return;
+   }
    const b=visualDraft.sections.find(a=>a.id===id);if(!b)return;
    b.image=imageValue;visualDirty=true;visualRerender(id);toast('เปลี่ยนภาพแล้ว กรุณากดบันทึก');
  }catch(e){toast('เปลี่ยนภาพไม่สำเร็จ: '+e.message)}
