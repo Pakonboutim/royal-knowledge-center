@@ -34,7 +34,7 @@ assert.equal(safe('#/station/herbs'),'#/station/herbs');
 assert.equal(safe('javascript:alert(1)'),'');
 assert.equal(safe('data:text/html,foo'),'');
 assert.equal(safe('https://u:p@example.com'),'');
-assert.equal(safe('https://example.com/\\nhello'),'');
+assert.equal(safe('https://example.com/'+String.fromCharCode(10)+'hello'),'');
 assert.ok(site.includes('data-visual-layout')&&site.includes('data-home-layout'),'Layout selector present on all editors');
 assert.ok(site.includes("b.side==='center'")&&site.includes("layout==='center'"),'Center layout rendered on all pages');
 assert.ok(site.includes('data-visual-link-url')&&site.includes('data-home-link-url'),'Link input present on both editors');
