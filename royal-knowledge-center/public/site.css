@@ -454,3 +454,25 @@ body{background:var(--paper)}.site-header{background:rgba(72,47,18,.97);box-shad
  .visual-link-editor,.home-link-settings{margin:16px 0 0;padding:13px}
  .visual-link-two,.home-link-two{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Word-like rich text ribbon: visible only in protected edit routes. */
+.wordbar{display:flex;align-items:center;flex:1 1 480px;justify-content:flex-start;flex-wrap:wrap;gap:6px;padding:7px 10px;background:linear-gradient(180deg,#fffefd,#f5ecd8);border:1px solid #d6c49d;border-radius:14px;box-shadow:0 4px 12px #3a29151a;color:#44351b;min-height:54px}
+.wordbar-note{display:inline-flex;color:#765c32;font-size:12px;font-weight:700;margin-right:5px;white-space:nowrap}
+.wordbar label{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:800;color:#5f4926;white-space:nowrap}
+.wordbar input[data-word-pt]{width:68px;min-height:35px;padding:5px 5px 5px 9px;border:1px solid #c4ad7b;border-radius:8px;color:#382a15;background:white;font-size:14px;font-weight:800;appearance:textfield;-moz-appearance:textfield}
+.wordbar input[data-word-pt]::-webkit-inner-spin-button{opacity:1}
+.wordbar button{display:inline-flex;align-items:center;justify-content:center;width:37px;height:37px;border:1px solid transparent;border-radius:8px;color:#423219;background:transparent;font-size:17px;line-height:1.2;font-family:inherit;font-weight:700;cursor:pointer}
+.wordbar button:hover{background:#efe0bf;border-color:#b99040}
+.wordbar button:focus-visible,.wordbar input:focus-visible{outline:2px solid #9c752c;outline-offset:2px}
+.wordbar-divider{height:26px;width:1px;background:#d2bb87;margin:0 3px}
+.visual-toolbar-inner>.wordbar{order:2;flex-basis:100%}
+.visual-toolbar-inner>.visual-buttons{order:1}
+.visual-toolbar{top:67px}
+.home-admin-bar>.wordbar{order:2;flex-basis:100%;max-width:100%;justify-content:center}
+.knowledge-page [contenteditable="true"],.home-content-editable{min-height:1.2em;white-space:pre-wrap;overflow-wrap:anywhere}
+.knowledge-page [contenteditable="true"] strong,.home-content-editable strong{font-weight:800}
+.knowledge-page [contenteditable="true"] em,.home-content-editable em{font-style:italic}
+.knowledge-page [contenteditable="true"] u,.home-content-editable u{text-decoration:underline}
+.home-custom-copy [contenteditable="true"]{outline:2px dashed #b48d38;outline-offset:5px;cursor:text;border-radius:5px}
+@media(max-width:900px){.wordbar{gap:4px;padding:7px;flex-basis:100%;justify-content:center}.wordbar-note{width:100%;justify-content:center;margin-right:0}.wordbar button{width:35px;height:35px}}
+@media(max-width:560px){.wordbar{gap:3px;border-radius:10px}.wordbar-note{font-size:11px}.wordbar input[data-word-pt]{width:60px;height:34px}.wordbar button{width:32px;height:34px}.wordbar-divider{margin:0 1px}.visual-toolbar{top:0}.home-admin-bar{top:60px}}
