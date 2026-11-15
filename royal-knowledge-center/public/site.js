@@ -250,11 +250,12 @@ function visualDisplayText(s){return visualText(s).replace(/\n/g,'<br>')}
 function visualField(block,field,content,cssClass='',placeholder='กดเพื่อแก้ไขข้อความ'){
   const editable=visualMode&&!visualPreview;
   const element=field==='title'?'h2':field==='tag'?'span':'div';
-  return `<${element} class="${cssClass} ${editable?'visual-editable':''}" ${editable?`contenteditable="true" spellcheck="true" role="textbox" aria-label="แก้ไข${esc(field)}" data-block-id="${esc(block.id)}" data-block-field="${field}" data-placeholder="${esc(placeholder)}"`:''}>${visualDisplayText(content)}</${element}>`;
+  return `<${element} class="${cssClass} ${editable?'visual-editable':''}" style="${RoyalRichText.style(block,field)}" ${editable?`contenteditable="true" spellcheck="true" role="textbox" aria-label="แก้ไข${esc(field)}" data-block-id="${esc(block.id)}" data-block-field="${field}" data-placeholder="${esc(placeholder)}"`:''}>${RoyalRichText.display(block,field,content)}</${element}>`;
 }
 function visualPageField(field,content,tag='h2'){
   const editable=visualMode&&!visualPreview;
-  return `<${tag} class="${editable?'visual-editable':''}" ${editable?`contenteditable="true" role="textbox" spellcheck="true" data-visual-page-field="${field}" data-placeholder="แตะเพื่อแก้ไข"`:''}>${visualDisplayText(content)}</${tag}>`;
+  const id=route()[1],x=activities.find(a=>a.id===id),holder=x?visualCurrentPage(id,x):null;
+  return `<${tag} class="${editable?'visual-editable':''}" style="${RoyalRichText.style(holder,field)}" ${editable?`contenteditable="true" role="textbox" spellcheck="true" data-visual-page-field="${field}" data-placeholder="แตะเพื่อแก้ไข"`:''}>${RoyalRichText.display(holder,field,content)}</${tag}>`;
 }
 
 // ============== VIDEO BLOCK SUPPORT ==============
@@ -447,8 +448,8 @@ function visualRow(id,b,i,all){
   return `<section class="knowledge-row visual-row ${reverse?'reverse':''} ${centered?'centered':''} ${b.kind==='text'?'no-image':''} ${b.kind==='video'?'video-block':''}" id="${b.id}" aria-label="${esc(b.title)}">
     ${visualSectionTools(b,i,all)}
     ${visualImage(id,b)}
-    <div class="knowledge-copy"><span class="knowledge-step"><b>${number}</b> ${visualMode&&!visualPreview?visualField(b,'tag',b.tag,'visual-step-tag','หัวข้อย่อย'):visualText(b.tag)}</span>
-      ${visualMode&&!visualPreview?visualField(b,'title',b.title,'visual-row-title','ชื่อหัวข้อ'):`<h2>${esc(b.title)}</h2>`}
+    <div class="knowledge-copy"><span class="knowledge-step"><b>${number}</b> ${visualField(b,'tag',b.tag,'visual-step-tag','หัวข้อย่อย')}</span>
+      ${visualField(b,'title',b.title,'visual-row-title','ชื่อหัวข้อ')}
       ${visualField(b,'text',b.text,`visual-copy ${b.size||'normal'} ${b.kind==='quote'?'quote':''}`,'เขียนเนื้อหาของฐานองค์ความรู้ที่นี่...')}
       ${contentLinkButton(b)}
       ${visualBlockLinkSettings(b)}
@@ -461,7 +462,7 @@ function visualToolbar(id){
   return `<div class="visual-toolbar"><div class="container visual-toolbar-inner">
     <div class="visual-toolbar-label">✎ กำลังแก้ไขหน้าเว็บจริง · ${esc(activities.find(x=>x.id===id)?.group||'กลุ่ม')}
       <small>${GAS?'บันทึกผ่าน Google Sheets เมื่อเปิดใช้งาน Apps Script':'เชื่อมต่อข้อมูลผ่าน Google Sheets'} ${visualDirty?'· มีการแก้ไขที่ยังไม่บันทึก':''}</small>
-    </div><div class="visual-buttons">
+    </div>${!visualPreview?RoyalRichText.toolbar():''}<div class="visual-buttons">
       <button type="button" class="visual-button" data-visual-preview>${visualPreview?'✎ กลับไปแก้ไข':'◉ ดูตัวอย่าง'}</button>
       <button type="button" class="visual-button primary" data-visual-save ${visualBusy?'disabled':''}>${visualBusy?'กำลังบันทึก...':'✓ บันทึกการเปลี่ยนแปลง'}</button>
       <button type="button" class="visual-button" data-visual-exit>ออกจากการแก้ไข</button>
@@ -490,8 +491,8 @@ function detail(id){
  const x=activities.find(z=>z.id===id);if(!x)return stationList();
  const ix=activities.indexOf(x),p=visualCurrentPage(id,x),canEdit=visualMode&&loggedGroup===id;
  return `<main class="view knowledge-page">
-   ${stationHero(id,x,ix,p,canEdit)}
    ${visualToolbar(id)}
+   ${stationHero(id,x,ix,p,canEdit)}
    <div class="container knowledge-wrap">
      <header class="knowledge-intro">
        <span class="eyebrow">ฐานองค์ความรู้ที่ ${String(ix+1).padStart(2,'0')}</span>
@@ -515,11 +516,13 @@ function visualSyncDom(){
  document.querySelectorAll('[data-visual-page-field]').forEach(el=>{
    let s=el.innerText.replace(/\r/g,'').trim();if(s.length>1200)s=s.slice(0,1200);
    visualDraft[el.dataset.visualPageField]=s;
+   RoyalRichText.capture(visualDraft,el.dataset.visualPageField,el);
  });
  document.querySelectorAll('[data-block-id][data-block-field]').forEach(el=>{
    const b=visualDraft.sections.find(v=>v.id===el.dataset.blockId);if(!b)return;
    let s=el.innerText.replace(/\r/g,'').trim();if(s.length>12000)s=s.slice(0,12000);
    b[el.dataset.blockField]=s;
+   RoyalRichText.capture(b,el.dataset.blockField,el);
  });
  for(const el of document.querySelectorAll('[data-visual-link-url]')){
    const b=visualDraft.sections.find(v=>v.id===el.dataset.visualLinkUrl);if(b)b.linkUrl=el.value.trim().slice(0,1600);
@@ -614,7 +617,7 @@ function visualButtonClick(e){
 }
 document.addEventListener('click',visualButtonClick);
 document.addEventListener('input',e=>{if(e.target.closest('[data-block-id][contenteditable], [data-visual-page-field][contenteditable], [data-visual-link-url], [data-visual-link-label]'))visualDirty=true});
-document.addEventListener('paste',e=>{if(!e.target.closest('[contenteditable][data-block-id], [contenteditable][data-visual-page-field]'))return;e.preventDefault();const text=e.clipboardData.getData('text/plain');document.execCommand('insertText',false,text)});
+document.addEventListener('paste',e=>{if(e.defaultPrevented||!e.target.closest('[contenteditable][data-block-id], [contenteditable][data-visual-page-field]'))return;e.preventDefault();const text=e.clipboardData.getData('text/plain');document.execCommand('insertText',false,text)});
 document.addEventListener('change',e=>{
  if(e.target.id==='visual-upload'&&e.target.files[0]){visualReadFile(e.target.files[0],visualUploadTarget);e.target.value=''}
  if(e.target.id==='visual-video-upload'&&e.target.files[0]){visualReadVideo(e.target.files[0],visualUploadTarget);e.target.value=''}
@@ -681,7 +684,7 @@ function homeSectionsHtml(){
        <button type="button" data-home-media>เปลี่ยนภาพ/วิดีโอ</button>
      </div>`:''}
     ${visual?`<div class="home-custom-media">${visual}</div>`:''}
-    <div class="home-custom-copy"><span class="eyebrow accent">องค์ความรู้ของเรา</span><h2 ${editing?'contenteditable="true" data-home-section-field="title"':''}>${esc(s.title||'')}</h2><p ${editing?'contenteditable="true" data-home-section-field="text"':''}>${esc(s.text||'').replace(/\n/g,'<br>')}</p>
+    <div class="home-custom-copy"><span class="eyebrow accent">องค์ความรู้ของเรา</span><h2 style="${RoyalRichText.style(s,'title')}" ${editing?'contenteditable="true" data-home-section-field="title"':''}>${RoyalRichText.display(s,'title',s.title||'')}</h2><p style="${RoyalRichText.style(s,'text')}" ${editing?'contenteditable="true" data-home-section-field="text"':''}>${RoyalRichText.display(s,'text',s.text||'')}</p>
        ${contentLinkButton(s,'home-link-button')}
        ${editing?`<div class="home-link-settings">
          <strong>🔗 ลิงก์สำหรับส่วนนี้</strong>
@@ -712,9 +715,10 @@ function home(){
  ['<p class="story-p">ศูนย์การเรียนรู้เชื่อมกิจกรรมทั้ง 4 ฐานเข้าด้วยกัน ตั้งแต่การปลูกพืช การผลิตปุ๋ยอินทรีย์ ไปจนถึงการจัดการน้ำและสัตว์น้ำ เพื่อให้ผู้เยี่ยมชมมองเห็นความสัมพันธ์ของทรัพยากรในระบบเดียวกัน</p>','p','storyText',' class="story-p"']
  ];
  for(const [find,tag,key,cls=''] of fields){
-  const content=esc(String(homeData[key]||HOME_DEFAULTS[key])).replace(/\n/g,'<br>');
+  const content=RoyalRichText.display(homeData,key,homeData[key]||HOME_DEFAULTS[key]);
+  const sty=' style="'+RoyalRichText.style(homeData,key)+'"';
   const attr=homeEditable()?` contenteditable="true" data-home-field="${key}" spellcheck="true" title="คลิกเพื่อแก้ไขข้อความ"`:'';
-  h=h.replace(find,`<${tag}${cls}${attr}>${content}</${tag}>`);
+  h=h.replace(find,`<${tag}${cls}${sty}${attr}>${content}</${tag}>`);
  }
  h=h.replace('class="banner-picture" src="/assets/photo-05-e392f0ad13.png"',`class="banner-picture" src="${mediaUrl(homeData.banner,HOME_DEFAULTS.banner)}"`);
  h=h.replace(`class="story-photo" src="${imgUrl(PHOTO.vegetables)}"`,`class="story-photo" src="${mediaUrl(homeData.storyImage,PHOTO.vegetables)}"`);
@@ -732,15 +736,21 @@ function home(){
 }
 function homeEditPage(){
  if(loggedGroup!=='home')return `<main class="view"><section class="section"><div class="container home-login"><h1>เข้าสู่ระบบแก้ไขหน้าแรก</h1><p>ใช้รหัสผ่านผู้ดูแลหน้าแรก ข้อมูลที่บันทึกจะปรากฏบนเว็บไซต์จริงเมื่อเชื่อม Google Sheets แล้ว</p><form id="home-login-form"><label>รหัสผ่านผู้ดูแลหน้าแรก <input id="home-pin" type="password" required minlength="5" autocomplete="current-password"></label><button class="btn btn-dark" type="submit">เข้าสู่ระบบ</button></form><p><a href="#/editor">ไปหน้าแก้ไขข้อมูล 4 ฐาน</a></p></div></section></main>`;
- return `<div class="home-admin-bar"><span>กำลังแก้ไขหน้าแรก · กดข้อความเพื่อแก้ไข / กดภาพเพื่อเปลี่ยน</span><button class="btn btn-lime btn-sm" id="home-add-image">＋ ภาพและข้อความ</button><button class="btn btn-lime btn-sm" id="home-add-video">＋ วิดีโอ</button><button class="btn btn-outline btn-sm" id="home-banner-link">🔗 ลิงก์แบนเนอร์</button><button class="btn btn-outline btn-sm" id="home-story-link">🔗 ลิงก์ภาพหลัก</button><button class="btn btn-dark btn-sm" id="home-save">✓ บันทึกหน้าแรก</button><button class="btn btn-outline btn-sm" id="home-logout">ออกจากระบบ</button><input type="file" id="home-media-file" accept="image/jpeg,image/png,image/webp" hidden></div>`+home();
+ return `<div class="home-admin-bar"><span>กำลังแก้ไขหน้าแรก · กดข้อความเพื่อแก้ไข / กดภาพเพื่อเปลี่ยน</span>${RoyalRichText.toolbar()}<button class="btn btn-lime btn-sm" id="home-add-image">＋ ภาพและข้อความ</button><button class="btn btn-lime btn-sm" id="home-add-video">＋ วิดีโอ</button><button class="btn btn-outline btn-sm" id="home-banner-link">🔗 ลิงก์แบนเนอร์</button><button class="btn btn-outline btn-sm" id="home-story-link">🔗 ลิงก์ภาพหลัก</button><button class="btn btn-dark btn-sm" id="home-save">✓ บันทึกหน้าแรก</button><button class="btn btn-outline btn-sm" id="home-logout">ออกจากระบบ</button><input type="file" id="home-media-file" accept="image/jpeg,image/png,image/webp" hidden></div>`+home();
 }
 function homeMount(){if(!homeEditable())return;
  document.querySelectorAll('[data-home-field],[data-home-section-field]').forEach(e=>e.classList.add('home-content-editable'));
  for(const el of document.querySelectorAll('.banner-picture,.story-photo')){el.title='คลิกเพื่อเปลี่ยนภาพ';el.classList.add('home-edit-image')}
 }
 function homeSync(){
- for(const e of document.querySelectorAll('[data-home-field]'))homeData[e.dataset.homeField]=String(e.innerText||'').slice(0,5000);
- for(const e of document.querySelectorAll('[data-home-section-field]')){const parent=e.closest('[data-home-id]');const item=homeData.sections.find(v=>v.id===parent?.dataset.homeId);if(item)item[e.dataset.homeSectionField]=String(e.innerText||'').slice(0,10000)}
+ for(const e of document.querySelectorAll('[data-home-field]')){
+  const key=e.dataset.homeField;homeData[key]=String(e.innerText||'').slice(0,5000);
+  RoyalRichText.capture(homeData,key,e);
+ }
+ for(const e of document.querySelectorAll('[data-home-section-field]')){
+  const parent=e.closest('[data-home-id]'),item=homeData.sections.find(v=>v.id===parent?.dataset.homeId);
+  if(item){const key=e.dataset.homeSectionField;item[key]=String(e.innerText||'').slice(0,10000);RoyalRichText.capture(item,key,e)}
+ }
  for(const field of ['linkUrl','linkLabel','linkMode','layout']){
   const selector={'linkUrl':'data-home-link-url','linkLabel':'data-home-link-label','linkMode':'data-home-link-mode','layout':'data-home-layout'}[field];
   for(const el of document.querySelectorAll('['+selector+']')){
