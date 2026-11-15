@@ -66,6 +66,25 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const imgUrl=s=>{const v=String(s||'').trim();return /^(https:\/\/|\/assets\/[A-Za-z0-9._-]+$)/i.test(v)?esc(v):''};
 const nl=s=>String(s||'').split('\n').map(x=>x.trim()).filter(Boolean);
 const icon=(n,sm=false)=>{const paths={leaf:'<path d="M20 4c-7 0-14 3-14 11a5 5 0 0 0 5 5c8 0 11-7 9-16Z"/><path d="M4 21c2-6 6-10 12-13"/>',arrow:'<path d="M5 12h14m-6-6 6 6-6 6"/>',back:'<path d="m14 7-5 5 5 5"/><path d="M20 12H9"/>',book:'<path d="M4 19V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0 0 4h13"/><path d="M4 19a2 2 0 0 0 2 2"/>',grid:'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',edit:'<path d="M12 20h9"/><path d="M15.5 4.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',qr:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h2m4 0h1m-7 4h2m2 3h3m-2-5v2"/>',check:'<path d="m5 12 4 4L19 6"/>',water:'<path d="M12 22a8 8 0 0 0 8-8c0-5-8-12-8-12S4 9 4 14a8 8 0 0 0 8 8Z"/>',sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/>',link:'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',download:'<path d="M12 3v12m-5-5 5 5 5-5"/><path d="M5 17v4h14v-4"/>',camera:'<path d="M14.5 4h-5L7 7H4v13h16V7h-3Z"/><circle cx="12" cy="13" r="3"/>',shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/><path d="m9 12 2 2 4-4"/>',home:'<path d="m3 10 9-7 9 7v11H3Z"/><path d="M9 21v-7h6v7"/>',menu:'<path d="M4 6h16M4 12h16M4 18h16"/>'};return `<svg class="icon ${sm?'icon-sm':''}" viewBox="0 0 24 24" aria-hidden="true">${paths[n]||paths.leaf}</svg>`};
+
+/* Validate CMS links before insertion into HTML. Never allow script/data URLs. */
+function safeContentUrl(value){
+  const raw=String(value||'').trim();
+  if(!raw||raw.length>1600||/[\\u0000-\\u001f\\u007f]/.test(raw))return '';
+  if(/^#\/[A-Za-z0-9_\/-]+$/.test(raw))return raw;
+  try{const u=new URL(raw);return u.protocol==='https:'&&!u.username&&!u.password?u.href:''}catch(_){return ''}
+}
+function contentLinkAttrs(value){
+ const safe=safeContentUrl(value);
+ return safe?`href="${esc(safe)}" ${safe.startsWith('#/')?'':'target="_blank" rel="noopener noreferrer"'}`:'';
+}
+function contentLinkMode(item){return ['image','button','both'].includes(item?.linkMode)?item.linkMode:'both'}
+function contentLinkLabel(item){return String(item?.linkLabel||'อ่านรายละเอียดเพิ่มเติม').trim().slice(0,100)||'อ่านรายละเอียดเพิ่มเติม'}
+function contentLinkButton(item,cssClass=''){
+ const url=safeContentUrl(item?.linkUrl),mode=contentLinkMode(item);
+ if(!url||!['button','both'].includes(mode))return '';
+ return `<a class="content-link-action ${cssClass}" ${contentLinkAttrs(url)}>${icon('link',true)} ${esc(contentLinkLabel(item))}</a>`;
+}
 function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');clearTimeout(window.__toastT);window.__toastT=setTimeout(()=>t.classList.remove('show'),2800)}
 function readLocal(){try{const data=JSON.parse(localStorage.getItem(APP_ID)||'null');if(data&&typeof data==='object'){activities=DEFAULTS.map(x=>({...x,...(data[x.id]||{}),id:x.id,group:x.group}));}}catch(e){}}
 function saveLocal(){try{localStorage.setItem(APP_ID,JSON.stringify(Object.fromEntries(activities.map(x=>[x.id,x]))));return true}catch(e){toast('ไม่สามารถบันทึกในเบราว์เซอร์นี้ได้ กรุณาเปิดผ่านเว็บเซิร์ฟเวอร์ หรืออนุญาตการจัดเก็บข้อมูล');return false}}
@@ -363,7 +382,12 @@ function visualSectionTools(b,i,all){
   return `<div class="visual-tools" role="group" aria-label="เครื่องมือจัดการส่วน${esc(b.title)}">
     <button type="button" title="ย้ายส่วนขึ้น" data-visual-move="up" data-bid="${b.id}" ${i===0?'disabled':''}>↑ ขึ้น</button>
     <button type="button" title="ย้ายส่วนลง" data-visual-move="down" data-bid="${b.id}" ${i===all.length-1?'disabled':''}>↓ ลง</button>
-    <button type="button" title="สลับตำแหน่งภาพ" data-visual-flip="${b.id}" ${b.kind==='text'?'disabled':''}>⇄ สลับภาพ</button>
+    <button type="button" title="สลับตำแหน่งภาพ" data-visual-flip="${b.id}" ${b.kind==='text'||b.side==='center'?'disabled':''}>⇄ สลับภาพ</button>
+    <select data-visual-layout="${esc(b.id)}" aria-label="การจัดวางส่วนเนื้อหา">
+      <option value="left" ${!b.side||b.side==='left'?'selected':''}>ภาพซ้าย</option>
+      <option value="right" ${b.side==='right'?'selected':''}>ภาพขวา</option>
+      <option value="center" ${b.side==='center'?'selected':''}>กึ่งกลาง</option>
+    </select>
     <select data-visual-size="${b.id}" aria-label="ขนาดข้อความ">
       <option value="small" ${b.size==='small'?'selected':''}>ตัวเล็ก</option>
       <option value="normal" ${!b.size||b.size==='normal'?'selected':''}>ตัวปกติ</option>
@@ -382,24 +406,52 @@ function visualAddAfter(id){
        <button type="button" data-visual-add-kind="video" data-after="${id}">▶ วิดีโอ + คำอธิบาย (เล่นอัตโนมัติ)</button>
     </div>`:''}</div>`;
 }
+
+function visualBlockLinkSettings(b){
+ if(!visualMode||visualPreview)return '';
+ const mode=contentLinkMode(b);
+ return `<div class="visual-link-editor" data-settings-for="${esc(b.id)}">
+   <div class="visual-link-heading">${icon('link',true)} ลิงก์สำหรับส่วนนี้ <small>เว้นว่างถ้าไม่ต้องการลิงก์</small></div>
+   <label>เว็บไซต์ปลายทาง (https://) หรือหน้าในเว็บ (#/station/herbs)
+     <input type="url" inputmode="url" data-visual-link-url="${esc(b.id)}" value="${esc(b.linkUrl||'')}" placeholder="https://example.com">
+   </label>
+   <div class="visual-link-two">
+     <label>รูปแบบลิงก์
+       <select data-visual-link-mode="${esc(b.id)}">
+         <option value="both" ${mode==='both'?'selected':''}>คลิกภาพและมีปุ่ม</option>
+         <option value="image" ${mode==='image'?'selected':''}>คลิกที่ภาพเท่านั้น</option>
+         <option value="button" ${mode==='button'?'selected':''}>แสดงปุ่มลิงก์เท่านั้น</option>
+       </select>
+     </label>
+     <label>ข้อความบนปุ่ม
+       <input type="text" maxlength="100" data-visual-link-label="${esc(b.id)}" value="${esc(b.linkLabel||'')}" placeholder="อ่านรายละเอียดเพิ่มเติม">
+     </label>
+   </div>
+   <small>ผู้ชมคลิกลิงก์แล้วเปิดหน้าใหม่ ส่วนในโหมดแก้ไขยังคลิกภาพเพื่อเปลี่ยนรูปได้</small>
+ </div>`;
+}
 function visualImage(id,b){
   if(b.kind==='text')return '';
   if(b.kind==='video')return visualVideo(id,b);
   const src=imgUrl(b.image)||(KNOWLEDGE_IMAGES[id]&&KNOWLEDGE_IMAGES[id][b.imageKey||'scene'])||imgUrl(PHOTO[id]);
   const edit=visualMode&&!visualPreview;
-  return `<div class="knowledge-photo">${edit?`<button type="button" class="visual-photo-button" data-visual-image="${b.id}" title="กดเปลี่ยนรูป">`:''}
-    <img src="${src}" alt="ภาพประกอบ: ${esc(b.title)}" loading="lazy">${edit?`<span class="visual-photo-label">📷 กดเพื่อเปลี่ยนรูป</span></button>`:''}
+  const url=safeContentUrl(b.linkUrl), linked=!edit&&url&&['image','both'].includes(contentLinkMode(b));
+  return `<div class="knowledge-photo">${edit?`<button type="button" class="visual-photo-button" data-visual-image="${b.id}" title="กดเปลี่ยนรูป">`:linked?`<a class="knowledge-photo-link" ${contentLinkAttrs(url)} aria-label="เปิดลิงก์ภาพ ${esc(b.title)}">`:''}
+    <img src="${src}" alt="ภาพประกอบ: ${esc(b.title)}" loading="lazy">${edit?`<span class="visual-photo-label">📷 กดเพื่อเปลี่ยนรูป</span></button>`:linked?'</a>':''}
     <div class="knowledge-cloud"></div></div>`;
 }
 function visualRow(id,b,i,all){
   const reverse=b.side==='right'&&b.kind!=='text';
+  const centered=b.side==='center';
   const number=String(i+1).padStart(2,'0');
-  return `<section class="knowledge-row visual-row ${reverse?'reverse':''} ${b.kind==='text'?'no-image':''} ${b.kind==='video'?'video-block':''}" id="${b.id}" aria-label="${esc(b.title)}">
+  return `<section class="knowledge-row visual-row ${reverse?'reverse':''} ${centered?'centered':''} ${b.kind==='text'?'no-image':''} ${b.kind==='video'?'video-block':''}" id="${b.id}" aria-label="${esc(b.title)}">
     ${visualSectionTools(b,i,all)}
     ${visualImage(id,b)}
     <div class="knowledge-copy"><span class="knowledge-step"><b>${number}</b> ${visualMode&&!visualPreview?visualField(b,'tag',b.tag,'visual-step-tag','หัวข้อย่อย'):visualText(b.tag)}</span>
       ${visualMode&&!visualPreview?visualField(b,'title',b.title,'visual-row-title','ชื่อหัวข้อ'):`<h2>${esc(b.title)}</h2>`}
       ${visualField(b,'text',b.text,`visual-copy ${b.size||'normal'} ${b.kind==='quote'?'quote':''}`,'เขียนเนื้อหาของฐานองค์ความรู้ที่นี่...')}
+      ${contentLinkButton(b)}
+      ${visualBlockLinkSettings(b)}
       ${b.id==='royal'?'<p class="visual-mini">ควรตรวจข้อความพระราชดำรัสและลิงก์ต้นฉบับให้ถูกต้องก่อนเผยแพร่</p>':''}
     </div>
   </section>${visualAddAfter(b.id)}`;
@@ -469,6 +521,15 @@ function visualSyncDom(){
    let s=el.innerText.replace(/\r/g,'').trim();if(s.length>12000)s=s.slice(0,12000);
    b[el.dataset.blockField]=s;
  });
+ for(const el of document.querySelectorAll('[data-visual-link-url]')){
+   const b=visualDraft.sections.find(v=>v.id===el.dataset.visualLinkUrl);if(b)b.linkUrl=el.value.trim().slice(0,1600);
+ }
+ for(const el of document.querySelectorAll('[data-visual-link-label]')){
+   const b=visualDraft.sections.find(v=>v.id===el.dataset.visualLinkLabel);if(b)b.linkLabel=el.value.trim().slice(0,100);
+ }
+ for(const el of document.querySelectorAll('[data-visual-link-mode]')){
+   const b=visualDraft.sections.find(v=>v.id===el.dataset.visualLinkMode);if(b)b.linkMode=el.value;
+ }
 }
 function visualMutation(){visualSyncDom();visualDirty=true}
 function visualRerender(scrollId){const scroll=window.scrollY;render();if(scrollId){const v=document.getElementById(scrollId);if(v)v.scrollIntoView({block:'center',behavior:'auto'})}else window.scrollTo({top:scroll,behavior:'auto'});}
@@ -478,6 +539,7 @@ async function visualSave(){
  if(!visualDraft.title.trim()||!visualDraft.short.trim()){toast('กรุณาระบุชื่อฐานและคำอธิบาย');return}
  if(!visualDraft.sections.length){toast('ต้องมีเนื้อหาอย่างน้อย 1 ส่วน');return}
  if(visualDraft.sections.length>30){toast('ไม่ควรมีมากกว่า 30 ส่วน');return}
+ if(visualDraft.sections.some(b=>b.linkUrl&&!safeContentUrl(b.linkUrl))){toast('ลิงก์ต้องเป็น HTTPS หรือหน้าในเว็บที่ขึ้นต้นด้วย #/');return}
  visualBusy=true;render();
  try{
    const data=visualClone(visualDraft);
@@ -521,7 +583,7 @@ function visualAddBlock(after,kind){
  visualSyncDom();const blocks=visualDraft.sections;
  if(blocks.length>=30){toast('เพิ่มได้สูงสุด 30 ส่วน');return}
  const i=after==='start'?-1:blocks.findIndex(b=>b.id===after);
- const b={id:visualId(),tag:'หัวข้อองค์ความรู้ใหม่',title:kind==='quote'?'คำกล่าวและแหล่งอ้างอิง':kind==='video'?'วิดีโอประกอบฐานองค์ความรู้':'หัวข้อใหม่',text:'แตะข้อความนี้เพื่อเขียนเนื้อหาและคำอธิบายของฐานองค์ความรู้',kind:kind==='text'?'text':kind==='quote'?'quote':kind==='video'?'video':'image',imageKey:'scene',image:'',videoUrl:'',videoLoop:true,side:blocks.length%2?'right':'left',size:'normal'};
+ const b={id:visualId(),tag:'หัวข้อองค์ความรู้ใหม่',title:kind==='quote'?'คำกล่าวและแหล่งอ้างอิง':kind==='video'?'วิดีโอประกอบฐานองค์ความรู้':'หัวข้อใหม่',text:'แตะข้อความนี้เพื่อเขียนเนื้อหาและคำอธิบายของฐานองค์ความรู้',kind:kind==='text'?'text':kind==='quote'?'quote':kind==='video'?'video':'image',imageKey:'scene',image:'',videoUrl:'',videoLoop:true,linkUrl:'',linkLabel:'',linkMode:kind==='image'?'both':'button',side:blocks.length%2?'right':'left',size:'normal'};
  blocks.splice(i+1,0,b);visualAddMenu=null;visualDirty=true;visualRerender(b.id);
  const el=document.querySelector('[data-block-id="'+b.id+'"][data-block-field="title"]');el?.focus();
 }
@@ -551,7 +613,7 @@ function visualButtonClick(e){
  }
 }
 document.addEventListener('click',visualButtonClick);
-document.addEventListener('input',e=>{if(e.target.closest('[data-block-id][contenteditable], [data-visual-page-field][contenteditable]'))visualDirty=true});
+document.addEventListener('input',e=>{if(e.target.closest('[data-block-id][contenteditable], [data-visual-page-field][contenteditable], [data-visual-link-url], [data-visual-link-label]'))visualDirty=true});
 document.addEventListener('paste',e=>{if(!e.target.closest('[contenteditable][data-block-id], [contenteditable][data-visual-page-field]'))return;e.preventDefault();const text=e.clipboardData.getData('text/plain');document.execCommand('insertText',false,text)});
 document.addEventListener('change',e=>{
  if(e.target.id==='visual-upload'&&e.target.files[0]){visualReadFile(e.target.files[0],visualUploadTarget);e.target.value=''}
@@ -567,6 +629,9 @@ document.addEventListener('change',e=>{
    visualSyncDom();const b=visualDraft?.sections.find(b=>b.id===e.target.dataset.visualVideoLoop);
    if(!b)return;b.videoLoop=e.target.checked;visualDirty=true;visualRerender(b.id);return;
  }
+ if(e.target.matches('select[data-visual-layout]')){visualSyncDom();const b=visualDraft?.sections.find(b=>b.id===e.target.dataset.visualLayout);if(!b)return;b.side=e.target.value;visualDirty=true;visualRerender(b.id);return}
+ if(e.target.matches('select[data-visual-link-mode]')){visualSyncDom();visualDirty=true;return}
+ if(e.target.matches('input[data-visual-link-url]')&&e.target.value.trim()&&!safeContentUrl(e.target.value)){toast('ใช้ลิงก์ https:// หรือ #/ ของเว็บไซต์เท่านั้น');return}
  if(e.target.matches('select[data-visual-size]')){visualSyncDom();const b=visualDraft?.sections.find(b=>b.id===e.target.dataset.visualSize);if(!b)return;b.size=e.target.value;visualDirty=true;visualRerender(b.id)}
 });
 
@@ -580,7 +645,7 @@ const HOME_DEFAULTS={
  intro:'สำรวจ 4 ฐานองค์ความรู้ เชื่อมโยงหลักการทรงงาน 27 ข้อ พร้อมบทความให้ผู้เยี่ยมชมศึกษารายละเอียดของแต่ละฐานได้ทันที',
  storyTitle:'ไม่ใช่แค่การปลูกพืช\nแต่คือการปลูกวิธีคิด',
  storyText:'ศูนย์การเรียนรู้เชื่อมกิจกรรมทั้ง 4 ฐานเข้าด้วยกัน ตั้งแต่การปลูกพืช การผลิตปุ๋ยอินทรีย์ ไปจนถึงการจัดการน้ำและสัตว์น้ำ เพื่อให้ผู้เยี่ยมชมมองเห็นความสัมพันธ์ของทรัพยากรในระบบเดียวกัน',
- banner:'/assets/photo-05-e392f0ad13.png',storyImage:PHOTO.vegetables,sections:[]
+ banner:'/assets/photo-05-e392f0ad13.png',storyImage:PHOTO.vegetables,bannerLink:'',storyImageLink:'',sections:[]
 };
 let homeData=structuredClone(HOME_DEFAULTS);
 const homeEditable=()=>IS_EDITOR&&route()[0]==='home-edit'&&loggedGroup==='home';
@@ -588,17 +653,52 @@ function mediaUrl(value,fallback){const s=String(value||fallback||'');return img
 function homeSectionsHtml(){
  const editing=homeEditable();
  const rows=(Array.isArray(homeData.sections)?homeData.sections:[]).map((s,i)=>{
-  const fields=`data-home-id="${esc(s.id)}"`,reverse=i%2===1?' reverse':'';
+  const fields=`data-home-id="${esc(s.id)}"`;
+  const layout=['left','right','center'].includes(s.layout)?s.layout:(i%2?'right':'left');
+  const reverse=layout==='right'?' reverse':layout==='center'?' centered':'';
   let visual='';
   if(s.kind==='video'){
     const parsed=videoParse(s.media||'');
     if(parsed?.type==='youtube')visual=`<iframe src="https://www.youtube-nocookie.com/embed/${parsed.id}?autoplay=1&mute=1&loop=1&playlist=${parsed.id}&playsinline=1" title="${esc(s.title)}" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
     else if(parsed?.type==='file')visual=`<video src="${esc(parsed.url)}" muted autoplay loop playsinline controls preload="metadata"></video>`;
-  } else if(s.kind==='image') visual=`<img src="${mediaUrl(s.media,PHOTO.herbs)}" alt="${esc(s.title)}" loading="lazy">`;
+  } else if(s.kind==='image'){
+    const im=`<img src="${mediaUrl(s.media,PHOTO.herbs)}" alt="${esc(s.title)}" loading="lazy">`;
+    const url=safeContentUrl(s.linkUrl);
+    visual=!editing&&url&&['image','both'].includes(contentLinkMode(s))?`<a class="home-custom-image-link" ${contentLinkAttrs(url)} aria-label="เปิดลิงก์ภาพ ${esc(s.title)}">${im}</a>`:im;
+  }
   return `<section class="home-custom-row${reverse}" ${fields}>
-    ${editing?`<div class="home-row-controls"><button type="button" data-home-move="up" ${i===0?'disabled':''}>↑ ขึ้น</button><button type="button" data-home-move="down" ${i===(homeData.sections.length-1)?'disabled':''}>↓ ลง</button><button type="button" data-home-remove>ลบส่วน</button><button type="button" data-home-media>เปลี่ยนภาพ/วิดีโอ</button></div>`:''}
+    ${editing?`<div class="home-row-controls">
+       <button type="button" data-home-move="up" ${i===0?'disabled':''}>↑ ขึ้น</button>
+       <button type="button" data-home-move="down" ${i===(homeData.sections.length-1)?'disabled':''}>↓ ลง</button>
+       <label class="home-control-layout">จัดวาง
+         <select data-home-layout aria-label="จัดวางส่วนเนื้อหา">
+           <option value="left" ${layout==='left'?'selected':''}>ภาพซ้าย</option>
+           <option value="right" ${layout==='right'?'selected':''}>ภาพขวา</option>
+           <option value="center" ${layout==='center'?'selected':''}>กึ่งกลาง</option>
+         </select>
+       </label>
+       <button type="button" data-home-remove>ลบส่วน</button>
+       <button type="button" data-home-media>เปลี่ยนภาพ/วิดีโอ</button>
+     </div>`:''}
     ${visual?`<div class="home-custom-media">${visual}</div>`:''}
-    <div class="home-custom-copy"><span class="eyebrow accent">องค์ความรู้ของเรา</span><h2 ${editing?'contenteditable="true" data-home-section-field="title"':''}>${esc(s.title||'')}</h2><p ${editing?'contenteditable="true" data-home-section-field="text"':''}>${esc(s.text||'').replace(/\n/g,'<br>')}</p></div>
+    <div class="home-custom-copy"><span class="eyebrow accent">องค์ความรู้ของเรา</span><h2 ${editing?'contenteditable="true" data-home-section-field="title"':''}>${esc(s.title||'')}</h2><p ${editing?'contenteditable="true" data-home-section-field="text"':''}>${esc(s.text||'').replace(/\n/g,'<br>')}</p>
+       ${contentLinkButton(s,'home-link-button')}
+       ${editing?`<div class="home-link-settings">
+         <strong>🔗 ลิงก์สำหรับส่วนนี้</strong>
+         <label>URL เว็บไซต์ปลายทาง (https://) หรือหน้าในเว็บ (#/station/herbs)
+           <input data-home-link-url type="url" inputmode="url" value="${esc(s.linkUrl||'')}" placeholder="https://example.com">
+         </label>
+         <div class="home-link-two">
+           <label>รูปแบบลิงก์ <select data-home-link-mode>
+             <option value="both" ${contentLinkMode(s)==='both'?'selected':''}>ภาพและปุ่ม</option>
+             <option value="image" ${contentLinkMode(s)==='image'?'selected':''}>เฉพาะภาพ</option>
+             <option value="button" ${contentLinkMode(s)==='button'?'selected':''}>เฉพาะปุ่ม</option>
+           </select></label>
+           <label>ข้อความบนปุ่ม
+             <input data-home-link-label type="text" maxlength="100" value="${esc(s.linkLabel||'')}" placeholder="อ่านรายละเอียดเพิ่มเติม">
+           </label>
+         </div>
+       </div>`:''}</div>
    </section>`;
  }).join('');
  return rows?`<section class="home-custom-sections"><div class="container">${rows}</div></section>`:'';
@@ -618,11 +718,21 @@ function home(){
  }
  h=h.replace('class="banner-picture" src="/assets/photo-05-e392f0ad13.png"',`class="banner-picture" src="${mediaUrl(homeData.banner,HOME_DEFAULTS.banner)}"`);
  h=h.replace(`class="story-photo" src="${imgUrl(PHOTO.vegetables)}"`,`class="story-photo" src="${mediaUrl(homeData.storyImage,PHOTO.vegetables)}"`);
+ // Existing landing banner and story image can also open a configured website.
+ if(!homeEditable()){
+  for(const [cls,key] of [['banner-picture','bannerLink'],['story-photo','storyImageLink']]){
+    const dest=safeContentUrl(homeData[key]);
+    if(dest){
+      const pattern=new RegExp('<img class="'+cls+'"[^>]*>');
+      h=h.replace(pattern,match=>`<a class="home-main-image-link" ${contentLinkAttrs(dest)} aria-label="เปิดลิงก์ภาพศูนย์การเรียนรู้">${match}</a>`);
+    }
+  }
+ }
  return h.replace('</main>',homeSectionsHtml()+'</main>');
 }
 function homeEditPage(){
  if(loggedGroup!=='home')return `<main class="view"><section class="section"><div class="container home-login"><h1>เข้าสู่ระบบแก้ไขหน้าแรก</h1><p>ใช้รหัสผ่านผู้ดูแลหน้าแรก ข้อมูลที่บันทึกจะปรากฏบนเว็บไซต์จริงเมื่อเชื่อม Google Sheets แล้ว</p><form id="home-login-form"><label>รหัสผ่านผู้ดูแลหน้าแรก <input id="home-pin" type="password" required minlength="5" autocomplete="current-password"></label><button class="btn btn-dark" type="submit">เข้าสู่ระบบ</button></form><p><a href="#/editor">ไปหน้าแก้ไขข้อมูล 4 ฐาน</a></p></div></section></main>`;
- return `<div class="home-admin-bar"><span>กำลังแก้ไขหน้าแรก · กดข้อความเพื่อแก้ไข / กดภาพเพื่อเปลี่ยน</span><button class="btn btn-lime btn-sm" id="home-add-image">＋ ภาพและข้อความ</button><button class="btn btn-lime btn-sm" id="home-add-video">＋ วิดีโอ</button><button class="btn btn-dark btn-sm" id="home-save">✓ บันทึกหน้าแรก</button><button class="btn btn-outline btn-sm" id="home-logout">ออกจากระบบ</button><input type="file" id="home-media-file" accept="image/jpeg,image/png,image/webp" hidden></div>`+home();
+ return `<div class="home-admin-bar"><span>กำลังแก้ไขหน้าแรก · กดข้อความเพื่อแก้ไข / กดภาพเพื่อเปลี่ยน</span><button class="btn btn-lime btn-sm" id="home-add-image">＋ ภาพและข้อความ</button><button class="btn btn-lime btn-sm" id="home-add-video">＋ วิดีโอ</button><button class="btn btn-outline btn-sm" id="home-banner-link">🔗 ลิงก์แบนเนอร์</button><button class="btn btn-outline btn-sm" id="home-story-link">🔗 ลิงก์ภาพหลัก</button><button class="btn btn-dark btn-sm" id="home-save">✓ บันทึกหน้าแรก</button><button class="btn btn-outline btn-sm" id="home-logout">ออกจากระบบ</button><input type="file" id="home-media-file" accept="image/jpeg,image/png,image/webp" hidden></div>`+home();
 }
 function homeMount(){if(!homeEditable())return;
  document.querySelectorAll('[data-home-field],[data-home-section-field]').forEach(e=>e.classList.add('home-content-editable'));
@@ -631,9 +741,18 @@ function homeMount(){if(!homeEditable())return;
 function homeSync(){
  for(const e of document.querySelectorAll('[data-home-field]'))homeData[e.dataset.homeField]=String(e.innerText||'').slice(0,5000);
  for(const e of document.querySelectorAll('[data-home-section-field]')){const parent=e.closest('[data-home-id]');const item=homeData.sections.find(v=>v.id===parent?.dataset.homeId);if(item)item[e.dataset.homeSectionField]=String(e.innerText||'').slice(0,10000)}
+ for(const field of ['linkUrl','linkLabel','linkMode','layout']){
+  const selector={'linkUrl':'data-home-link-url','linkLabel':'data-home-link-label','linkMode':'data-home-link-mode','layout':'data-home-layout'}[field];
+  for(const el of document.querySelectorAll('['+selector+']')){
+   const item=homeData.sections.find(v=>v.id===el.closest('[data-home-id]')?.dataset.homeId);
+   if(item)item[field]=String(el.value||'').trim().slice(0,field==='linkUrl'?1600:field==='linkLabel'?100:16);
+  }
+ }
 }
 async function homeSave(){
  if(!homeEditable())return;homeSync();
+ const urls=[homeData.bannerLink,homeData.storyImageLink,...(homeData.sections||[]).map(s=>s.linkUrl)];
+ if(urls.some(u=>u&&!safeContentUrl(u))){toast('ลิงก์ต้องเป็น HTTPS หรือหน้าในเว็บที่ขึ้นต้นด้วย #/');return}
  const b=$('#home-save');if(b)b.disabled=true;
  try{await gsCall('saveHomePage','home',loginCode,homeData);toast('บันทึกหน้าแรกแล้ว ข้อมูลใหม่พร้อมแสดงบนเว็บสาธารณะ')}catch(e){toast('บันทึกหน้าแรกไม่สำเร็จ: '+e.message)}finally{if(b)b.disabled=false}
 }
@@ -662,9 +781,16 @@ document.addEventListener('click',async e=>{
  const t=e.target,sec=t.closest('[data-home-id]');
  if(t.closest('#home-save'))return homeSave();
  if(t.closest('#home-logout')){loggedGroup=null;loginCode='';render();return}
+ if(t.closest('#home-banner-link')||t.closest('#home-story-link')){
+  homeSync();const key=t.closest('#home-banner-link')?'bannerLink':'storyImageLink';
+  const url=prompt('ใส่ลิงก์ HTTPS ของภาพนี้ (เว้นว่างเพื่อลบลิงก์)',homeData[key]||'');
+  if(url!==null){if(url.trim()&&!safeContentUrl(url)){toast('กรุณาใช้ลิงก์ HTTPS หรือ #/ ของเว็บไซต์');return}
+    homeData[key]=url.trim();toast('แก้ลิงก์แล้ว กรุณากดบันทึกหน้าแรก');}
+  return;
+ }
  if(t.closest('#home-add-image')||t.closest('#home-add-video')){
   homeSync();const video=!!t.closest('#home-add-video');
-  homeData.sections.push({id:'home-'+Date.now().toString(36),kind:video?'video':'image',title:video?'วิดีโอการเรียนรู้':'หัวข้อใหม่',text:'คลิกที่นี่เพื่อใส่รายละเอียด',media:video?'':PHOTO.herbs});
+  homeData.sections.push({id:'home-'+Date.now().toString(36),kind:video?'video':'image',title:video?'วิดีโอการเรียนรู้':'หัวข้อใหม่',text:'คลิกที่นี่เพื่อใส่รายละเอียด',media:video?'':PHOTO.herbs,linkUrl:'',linkLabel:'',linkMode:video?'button':'both',layout:homeData.sections.length%2?'right':'left'});
   render();return;
  }
  if(t.closest('[data-home-remove]')&&sec){homeSync();homeData.sections=homeData.sections.filter(x=>x.id!==sec.dataset.homeId);render();return}
@@ -679,7 +805,11 @@ document.addEventListener('click',async e=>{
  }
  if(t.matches('.banner-picture,.story-photo')){homeSync();homeImageTarget=t.matches('.banner-picture')?'banner':'storyImage';$('#home-media-file')?.click();return}
 });
-document.addEventListener('change',e=>{if(e.target.id==='home-media-file'&&e.target.files?.[0]){homeUpload(e.target.files[0]);e.target.value=''}});
+document.addEventListener('change',e=>{
+ if(e.target.id==='home-media-file'&&e.target.files?.[0]){homeUpload(e.target.files[0]);e.target.value='';return}
+ if(e.target.matches('[data-home-layout]')&&homeEditable()){homeSync();render();return}
+ if(e.target.matches('[data-home-link-url]')&&e.target.value.trim()&&!safeContentUrl(e.target.value))toast('กรุณาใช้ HTTPS หรือ #/ ของเว็บไซต์');
+});
 window.addEventListener('hashchange',()=>{render();window.scrollTo({top:0,behavior:'instant'})});
 if(IS_EDITOR&&!location.hash)location.hash="#/editor";render();hydrateServer();
 
