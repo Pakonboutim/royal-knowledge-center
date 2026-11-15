@@ -476,3 +476,10 @@ body{background:var(--paper)}.site-header{background:rgba(72,47,18,.97);box-shad
 .home-custom-copy [contenteditable="true"]{outline:2px dashed #b48d38;outline-offset:5px;cursor:text;border-radius:5px}
 @media(max-width:900px){.wordbar{gap:4px;padding:7px;flex-basis:100%;justify-content:center}.wordbar-note{width:100%;justify-content:center;margin-right:0}.wordbar button{width:35px;height:35px}}
 @media(max-width:560px){.wordbar{gap:3px;border-radius:10px}.wordbar-note{font-size:11px}.wordbar input[data-word-pt]{width:60px;height:34px}.wordbar button{width:32px;height:34px}.wordbar-divider{margin:0 1px}.visual-toolbar{top:0}.home-admin-bar{top:60px}}
+
+/* CMS undo and redo controls */
+.wordbar [data-cms-undo],.wordbar [data-cms-redo]{font-size:25px;font-family:Arial,system-ui,sans-serif;font-weight:500;line-height:1}
+.wordbar [data-cms-undo]:disabled,.wordbar [data-cms-redo]:disabled{opacity:.35;cursor:not-allowed;background:transparent;border-color:transparent;transform:none}
+.wordbar [data-cms-undo]:not(:disabled):hover,.wordbar [data-cms-redo]:not(:disabled):hover{background:#e7d19f;border-color:#bc923e}
+.wordbar [data-cms-undo]:not(:disabled):focus-visible,.wordbar [data-cms-redo]:not(:disabled):focus-visible{outline:2px solid #8d672a;outline-offset:2px}
+@media(max-width:560px){.wordbar [data-cms-undo],.wordbar [data-cms-redo]{font-size:23px}}
