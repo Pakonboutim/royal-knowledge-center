@@ -193,6 +193,21 @@ function render(){
   if(r[0]==='principles')$('#principle-search')?.addEventListener('input',e=>{$('#principle-results').innerHTML=principleCards(e.target.value)});
   if(r[0]==='station')setTimeout(visualBindVideos,0);
   if(['home','home-edit'].includes(r[0]))homeMount();
+  // Keep one in-memory undo history for each authenticated editing session.
+  if(IS_EDITOR&&r[0]==='station'&&visualMode&&loggedGroup===r[1]&&visualDraft){
+    RoyalHistory.attach('station:'+r[1],()=>{
+      if(!visualPreview)visualSyncDom();
+      return visualClone(visualDraft);
+    },snapshot=>{
+      visualDraft=visualClone(snapshot);visualDirty=true;visualRerender();
+    });
+  }else if(IS_EDITOR&&r[0]==='home-edit'&&loggedGroup==='home'){
+    RoyalHistory.attach('homepage',()=>{
+      homeSync();return structuredClone(homeData);
+    },snapshot=>{
+      homeData=structuredClone(snapshot);render();
+    });
+  }else RoyalHistory.attach(null);
 }
 function formPayload(f){const names=['title','kicker','short','intro','objective','equipment','steps','takeaway','interpretation','image'];const p={};for(const n of names)p[n]=String(f.elements[n]?.value||'').trim();p.principles=[...f.querySelectorAll('input[name="principles"]:checked')].map(z=>Number(z.value));return p}
 function updateGroup(id,p){const i=activities.findIndex(x=>x.id===id);if(i<0)return;activities[i]={...activities[i],...p,updatedAt:new Date().toLocaleString('th-TH',{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'})}}
