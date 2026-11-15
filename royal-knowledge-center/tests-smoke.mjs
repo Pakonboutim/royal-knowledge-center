@@ -62,3 +62,61 @@ assert.ok(site.includes('RoyalRichText.display(s'));
 assert.ok(site.includes('RoyalRichText.display(homeData'));
 assert.ok(richSource.includes("['script','style','svg','math','iframe'"));
 console.log('Word-like CMS formatting checks passed');
+
+
+/* Undo and Redo: per-page scope, keyboard shortcuts and branching after undo. */
+const historySource=readFileSync(new URL('./public/editor-history.js',import.meta.url),'utf8');
+const listeners=new Map();
+const mockDocument={
+ addEventListener(name,callback){const a=listeners.get(name)||[];a.push(callback);listeners.set(name,a)},
+ querySelectorAll(){return []}
+};
+const mockWindow={};
+new Function('window','document','queueMicrotask',historySource)(mockWindow,mockDocument,queueMicrotask);
+const history=mockWindow.RoyalHistory;
+assert.ok(history,'History controller is available');
+let contentValue='A',restored=[];
+history.attach('station:herbs',()=>({text:contentValue}),snap=>{
+ contentValue=snap.text;restored.push(contentValue);
+});
+assert.equal(history.status().undo,false);
+contentValue='AB';history.record('action');
+assert.equal(history.status().undo,true);
+contentValue='ABC';history.record('action');
+assert.equal(history.status().length,3);
+assert.equal(history.undo(),true);
+assert.equal(contentValue,'AB');
+assert.equal(history.undo(),true);
+assert.equal(contentValue,'A');
+assert.equal(history.status().undo,false);
+assert.equal(history.redo(),true);
+assert.equal(contentValue,'AB');
+contentValue='AB different';history.record('action');
+assert.equal(history.status().redo,false,'New edits invalidate redo branch');
+assert.equal(history.undo(),true);assert.equal(contentValue,'AB');
+history.attach('homepage',()=>({text:'home'}),snap=>restored.push(snap.text));
+assert.equal(history.status().scope,'homepage');
+assert.equal(history.status().length,1,'History is reset when switching page');
+assert.equal(history.undo(),false);
+let prevented=false;
+history.attach('station:water',()=>({text:contentValue}),snap=>{contentValue=snap.text});
+contentValue='changed';history.record('action');
+for(const fn of listeners.get('keydown')||[])fn({
+ ctrlKey:true,metaKey:false,altKey:false,shiftKey:false,key:'z',
+ target:{matches:()=>false},preventDefault(){prevented=true}
+});
+assert.ok(prevented,'Ctrl+Z uses CMS undo on the content page');
+assert.equal(contentValue,'AB');
+prevented=false;
+for(const fn of listeners.get('keydown')||[])fn({
+ ctrlKey:true,metaKey:false,altKey:false,shiftKey:false,key:'y',
+ target:{matches:()=>false},preventDefault(){prevented=true}
+});
+assert.ok(prevented,'Ctrl+Y uses CMS redo');
+assert.equal(contentValue,'changed');
+history.attach(null);
+assert.equal(history.status().scope,'');
+assert.ok(rich.toolbar().includes('data-cms-undo'));
+assert.ok(rich.toolbar().includes('data-cms-redo'));
+assert.ok(site.includes('RoyalHistory.attach('),'Site editor must initialize history');
+console.log('Undo/Redo history tests passed');
