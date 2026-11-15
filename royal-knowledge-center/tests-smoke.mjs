@@ -42,3 +42,23 @@ assert.ok(site.includes("visualDraft.sections")&&site.includes("homeData.section
 assert.ok(site.includes('home-main-image-link')&&site.includes('knowledge-photo-link'),'Public images render as safe links');
 assert.ok(style.includes('.knowledge-row.visual-row.centered')&&style.includes('.home-custom-row.centered'),'Centered layouts are styled');
 console.log('CMS link and centered-layout checks passed');
+
+
+/* Rich-text formatting on stored content: style is bounded and markup renderer is restricted. */
+const richSource=readFileSync(new URL('./public/rich-editor.js',import.meta.url),'utf8');
+const richWindow={};
+const richDocument={addEventListener(){}};
+new Function('window','document',richSource)(richWindow,richDocument);
+const rich=richWindow.RoyalRichText;
+assert.ok(rich,'Rich-text editor module is registered');
+assert.equal(rich.style({format:{text:{pt:18,align:'center'}}},'text'),'text-align:center;font-size:18pt;');
+assert.equal(rich.style({format:{text:{pt:120,align:'invalid'}}},'text'),'');
+assert.ok(rich.toolbar().includes('data-word-pt'));
+for(const cmd of ['bold','italic','underline'])assert.ok(rich.toolbar().includes('data-word-cmd="'+cmd+'"'));
+for(const pos of ['left','center','right'])assert.ok(rich.toolbar().includes('data-word-align="'+pos+'"'));
+assert.ok(site.includes('RoyalRichText.capture(visualDraft'));
+assert.ok(site.includes('RoyalRichText.capture(homeData'));
+assert.ok(site.includes('RoyalRichText.display(s'));
+assert.ok(site.includes('RoyalRichText.display(homeData'));
+assert.ok(richSource.includes("['script','style','svg','math','iframe'"));
+console.log('Word-like CMS formatting checks passed');
